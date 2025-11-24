@@ -1,0 +1,66 @@
+# mpirun -np 4 ./test_smartredis_mpi
+
+program test_smartredis_mpi
+  use iso_c_binding
+  use smartredis_mpi
+  implicit none
+
+  integer :: ierr, i
+  integer, dimension(3) :: dims
+  real(C_DOUBLE), dimension(6) :: state
+  real(C_DOUBLE), dimension(3) :: action
+  real(C_DOUBLE) :: scalar
+  integer(C_INT), dimension(3) :: info
+  character(kind=C_CHAR, len=10) :: key_char
+
+  ! Initialize MPI
+  call init_smartredis_mpi()
+
+  print *, "SmartRedis MPI initialized."
+
+  ! Test handle creation
+  print *, "Global handle associated:", c_associated(global_handle)
+
+  ! Put step type
+  key_char = "step_type"//C_NULL_CHAR
+  call put_step_type(key_char, 1)
+  print *, "Step type written."
+
+  ! Put state
+  dims = (/2, 1, 3/)
+  state = (/1.0d0, 2.0d0, 3.0d0, 4.0d0, 5.0d0, 6.0d0/)
+  key_char = "state"//C_NULL_CHAR
+  call put_state(key_char, dims, state)
+  print *, "State written."
+
+  ! Put reward
+  dims = (/3/)
+  state = (/10.0d0, 20.0d0, 30.0d0/)
+  key_char = "reward"//C_NULL_CHAR
+  call put_reward(key_char, dims, state)
+  print *, "Reward written."
+
+  ! Get action (dummy read)
+  dims = (/3/)
+  action = 0.0d0
+  key_char = "action"//C_NULL_CHAR
+  call get_action(key_char, dims, action)
+  print *, "Action read:", action
+
+  ! Put info
+  info = (/1,2,3/)
+  key_char = "info"//C_NULL_CHAR
+  call put_info(key_char, dims, info)
+  print *, "Info written."
+
+  ! Put real scalar
+  scalar = 42.0d0
+  key_char = "scalar"//C_NULL_CHAR
+  call put_real_scalar(key_char, scalar)
+  print *, "Scalar written."
+
+  ! Finalize
+  call finalize_smartredis_mpi()
+  print *, "SmartRedis MPI finalized."
+
+end program test_smartredis_mpi
