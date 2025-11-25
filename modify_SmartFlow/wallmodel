@@ -1,19 +1,20 @@
   subroutine wallmodel_DRL(visc, flattened_state, flattened_stress, flattened_metric)
-    use iso_c_binding
+    use iso_c_binding ! zzy
     implicit none
     real(rp), intent(in) :: visc
     type(FlattenedState), intent(in) :: flattened_state
     type(FlattenedStress), intent(inout) :: flattened_stress
     type(FlattenedMetric), intent(in), optional :: flattened_metric
     real(rp) :: u1, u2, upar, tauw_tot, tauw1, tauw2, this_action
-    integer :: n_points, i
+    integer :: n_points, i, lenks, n
     logical, save :: is_first = .true.
 
     real(C_DOUBLE), allocatable, dimension(:,:) :: drl_state
     real(C_DOUBLE), allocatable, dimension(:,:) :: drl_action
     real(C_DOUBLE), allocatable, dimension(:,:) :: drl_reward
 
-    character(kind=C_CHAR, len=:), allocatable :: key_c
+    character(kind=c_char), allocatable :: key_c(:)
+    character(len=:), allocatable :: key_str
     integer, allocatable :: dims_shape(:)
 
     n_points = size(flattened_state%vel_x1)
@@ -42,7 +43,18 @@
     allocate(dims_shape(2))
     dims_shape = (/ 3, n_points /)
 
-    key_c = trim(adjustl(tag)) // ".state" // C_NULL_CHAR
+    key_str = trim(adjustl(tag)) // ".state"
+    lenks = len_trim(key_str)
+    n = lenks + 1    ! +1 for NUL terminator
+
+    if (allocated(key_c)) deallocate(key_c)
+    allocate(character(kind=c_char) :: key_c(n))
+
+    do i = 1, lenks
+      key_c(i) = key_str(i:i)
+    end do
+    key_c(n) = c_null_char
+
     call put_state(key_c, dims_shape, drl_state)
 
     !
@@ -58,7 +70,18 @@
       allocate(dims_shape(2))
       dims_shape = (/ 2, n_points /)
 
-      key_c = trim(adjustl(tag)) // ".reward" // C_NULL_CHAR
+      key_str = trim(adjustl(tag)) // ".reward"
+      lenks = len_trim(key_str)
+      n = lenks + 1    ! +1 for NUL terminator
+
+      if (allocated(key_c)) deallocate(key_c)
+      allocate(character(kind=c_char) :: key_c(n))
+
+      do i = 1, lenks
+        key_c(i) = key_str(i:i)
+      end do
+      key_c(n) = c_null_char
+
       call put_reward(key_c, dims_shape, drl_reward)
     end if
     !
@@ -67,7 +90,18 @@
     allocate(dims_shape(2))
     dims_shape = (/ 1, n_points /)
 
-    key_c = trim(adjustl(tag)) // ".action" // C_NULL_CHAR
+    key_str = trim(adjustl(tag)) // ".action"
+    lenks = len_trim(key_str)
+    n = lenks + 1    ! +1 for NUL terminator
+
+    if (allocated(key_c)) deallocate(key_c)
+    allocate(character(kind=c_char) :: key_c(n))
+
+    do i = 1, lenks
+      key_c(i) = key_str(i:i)
+    end do
+    key_c(n) = c_null_char
+
     call get_action(key_c, dims_shape, drl_action)
 
     do i = 1, n_points

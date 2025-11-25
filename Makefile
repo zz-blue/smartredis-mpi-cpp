@@ -68,7 +68,7 @@ C_SRCS := $(C_DIR)/SmartRedisMPI_CWrappers.cpp
 C_OBJS := $(patsubst $(C_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(C_SRCS))
 
 SHARED_LIB := $(LIB_DIR)/libsmartredis_mpi.so
-FORTRAN_LIB := $(LIB_DIR)/libsmartredis_mpi_fortran.a
+FORTRAN_LIB := $(LIB_DIR)/libsmartredis_mpi.a
 PY_MODULE := $(LIB_DIR)/pysmartredis.so
 C_WRAPPER_LIB := $(LIB_DIR)/libsmartredis_cwrappers.a
 
