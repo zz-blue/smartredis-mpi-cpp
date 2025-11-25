@@ -42,7 +42,8 @@ LIBS := -lsmartredis -lsmartredis-fortran \
 # Directories
 # -----------------------
 BUILD_DIR := build
-LIB_DIR   := lib
+LIB_DIR   := build/lib
+INC_DIR   := build/include  
 SRC_DIR   := src
 
 CPP_DIR := $(SRC_DIR)/cpp
@@ -58,7 +59,7 @@ CPP_OBJS := $(patsubst $(CPP_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(CPP_SRCS))
 
 F90_SRCS := $(F90_DIR)/smartredis_mpi.f90
 F90_OBJS := $(patsubst $(F90_DIR)/%.f90,$(BUILD_DIR)/%.o,$(F90_SRCS))
-F90_MODS := $(BUILD_DIR)/smartredis_mpi.mod
+F90_MODS := $(INC_DIR)/smartredis_mpi.mod
 
 PY_SRC := $(PY_DIR)/pysmartredis.cpp
 PY_OBJ := $(BUILD_DIR)/pysmartredis.o
@@ -84,6 +85,7 @@ all: dirs $(SHARED_LIB) $(FORTRAN_LIB) $(PY_MODULE) $(C_WRAPPER_LIB)
 dirs:
 	mkdir -p $(BUILD_DIR)
 	mkdir -p $(LIB_DIR)
+	mkdir -p $(INC_DIR)
 
 # -----------------------
 # Build C++ objects
@@ -102,7 +104,7 @@ $(BUILD_DIR)/pysmartredis.o: $(PY_SRC)
 # -----------------------
 $(BUILD_DIR)/%.o: $(F90_DIR)/%.f90
 	@echo "FORTRAN -> $<"
-	$(MPIFORT) $(FCFLAGS) $(MODULE_FLAG) $(BUILD_DIR) -c $< -o $@
+	$(MPIFORT) $(FCFLAGS) $(MODULE_FLAG) $(INC_DIR) -c $< -o $@
 
 # compile rule for c wrappers (reuse C++ compiler)
 $(BUILD_DIR)/%.o: $(C_DIR)/%.cpp
@@ -140,4 +142,4 @@ $(C_WRAPPER_LIB): $(C_OBJS) $(CPP_OBJS)
 # -----------------------
 .PHONY: clean
 clean:
-	rm -rf $(BUILD_DIR)/* $(LIB_DIR)/*.so $(LIB_DIR)/*.a $(BUILD_DIR)/*.mod
+	rm -rf $(BUILD_DIR)/* $(LIB_DIR)/*.so $(LIB_DIR)/*.a $(INC_DIR)/*.mod

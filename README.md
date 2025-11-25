@@ -2,73 +2,56 @@
 
 ## Overview
 
-The **SmartRedisMPI framework** provides a high-performance interface to **SmartRedis** in an **MPI environment**, enabling seamless integration with HPC applications. The framework is built around a **C++ core** and wrapped with **C, Fortran, and Python interfaces**, allowing easy usage across multiple languages.
+The **SmartRedisMPI framework** provides a high-performance interface to **SmartRedis** in an **MPI environment**, enabling seamless integration with HPC applications. The framework is designed with a **C++ core**, wrapped with a **C interface** to allow easy usage from **Fortran** and **Python**.
 
----
+### Framework Components
 
-## Framework Components
+* **SmartRedisMPI C++ Core** (`SmartRedisMPI.cpp` / `.h`)
+  Handles all communication with SmartRedis and MPI, including data storage and retrieval operations.
 
-* **SmartRedisMPI C++ Core (`SmartRedisMPI.cpp` / `.h`)**
-  Handles all communication with SmartRedis and MPI, including data storage and retrieval.
+* **C Interface** (`SmartRedisMPI_CInterface.cpp` / `.h`)
+  Provides a simple, portable API to bridge the C++ core with Fortran and Python.
 
-* **C Interface (`SmartRedisMPI_CInterface.cpp` / `.h`)**
-  Provides a **simple and portable API** that bridges the C++ core with **C, Fortran, and Python** wrappers, enabling multi-language interoperability.
+* **Fortran Interface** (`smartredis_mpi.f90`)
+  Fortran bindings for HPC simulations, allowing the framework to be used in legacy or high-performance Fortran codebases.
 
-* **Wrappers** (for multi-language support)
-
-  * **C Wrappers (`SmartRedisMPI_CWrappers.cpp`)**
-    Provides a **pure C API** that can be used directly in C programs or as a bridge for other languages requiring a standard C interface.
-  * **Fortran Wrappers (`smartredis_mpi.f90`)**
-    Provides Fortran bindings for HPC simulations, enabling use in legacy or high-performance Fortran codebases.
-
-    > **Note:** Functionality is largely consistent with previous versions. The interface uses **`cchar`** data types, so arguments may require type conversion when calling the functions.
-  * **Python Wrapper (`pysmartredis.cpp`)**
-    Provides Python bindings using **pybind11**.
+* **Python Wrapper** (`pysmartredis.cpp`)
+  Provides Python bindings using `pybind11` to access SmartRedisMPI from Python scripts.
 
 * **Test Programs**
-  Example scripts in C, Fortran, and Python demonstrate initialization, data put/get operations, and cleanup.
+  Example scripts in Fortran and Python demonstrate initialization, data put/get operations, and cleanup.
 
 ---
 
 ## Features
 
 * MPI-aware: Supports distributed memory parallelism.
-* Multi-language support: Works natively with **C++**, **C**, **Fortran**, and **Python**.
+* Multi-language support: Works natively with **C++**, **Fortran**, and **Python**.
 * Data operations: Supports storing/retrieving states, actions, rewards, info arrays, and scalars.
-* Easy integration: Minimal dependencies beyond MPI and SmartRedis.
+* Easy to integrate: Minimal dependencies beyond MPI and SmartRedis.
 
 ---
 
-## Build
+## Installation
 
-1. **Modify Makefile**: Update environment paths (MPI, SmartRedis, Python includes/libraries) as needed.
+1. **Prerequisites**:
 
-2. **Compile**:
+   * MPI (e.g., OpenMPI, MVAPICH2, or HPC-X MPI)
+   * SmartRedis library
+   * C++ compiler with C++11 support
+   * For Python: `pybind11`, compatible Python version
 
-```bash
-make
-```
+2. **Build**:
 
-This builds the **C++ core**, **C Interface**, **C/Fortran/Python wrappers**, and test programs.
+   ```bash
+   make
+   ```
+
+   This compiles the C++ core, C interface, Fortran module, and Python wrapper.
 
 ---
 
-## Usage Examples
-
-### C Example (via C Wrappers)
-
-```c
-#include "SmartRedisMPI_CWrappers.h"
-#include <stdio.h>
-
-int main() {
-    SmartRedisMPI_Init(1); // verbose
-    SmartRedisMPI_PutRealScalar("test_scalar", 3.14);
-    SmartRedisMPI_Finalize();
-    printf("C API test completed.\n");
-    return 0;
-}
-```
+## Usage
 
 ### Fortran Example
 
@@ -93,3 +76,10 @@ pysmartredis.put_real_scalar("test_scalar", 3.14)
 pysmartredis.finalize_smartredis_mpi()
 ```
 
+---
+
+## Notes
+
+* The C interface is primarily for interoperability; direct usage in C++ is also supported.
+* MPI handles must be initialized before calling any put/get operations.
+* Python scripts require the compiled `pysmartredis` module in the Python path.
