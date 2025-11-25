@@ -7,7 +7,7 @@ import os
 
 os.environ["SSDB"] = "tcp://127.0.0.1:6379"
 
-sys.path.append("lib")
+sys.path.append(os.path.abspath('../lib'))
 
 import pysmartredis
 

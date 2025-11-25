@@ -1,0 +1,31 @@
+No Redis
+No action
+# export LD_LIBRARY_PATH=/data/home/scvi558/run/zzy/smartredis-mpi-cpp/lib:$LD_LIBRARY_PATH
+
+# Python
+mpirun -n 4 python ./test/test_pysmartredis.py
+
+# Fortran
+## compile test_smartredis_mpi.f90
+nvfortran -o test/test_smartredis_mpi \
+    test/test_smartredis_mpi.f90 \
+    -I/data/home/scvi558/run/zzy/smartredis-mpi-cpp/build \
+    -I/data/apps/nvhpc/25.3_cuda12.8/Linux_x86_64/25.3/comm_libs/12.8/hpcx/hpcx-2.22.1/ompi/lib \
+    -L/data/home/scvi558/run/zzy/smartredis-mpi-cpp/lib -lsmartredis_mpi_fortran -lsmartredis_mpi \
+    -L/data/home/scvi558/run/zzy/SmartRedis/install/lib -lsmartredis \
+    -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh -lmpi
+## run test_smartredis_mpi
+mpirun -np 4 ./test/test_smartredis_mpi
+
+# C
+## compile test_c_wrappers.c
+mpicc test/test_c_wrappers.c \
+    -I/data/home/scvi558/run/zzy/smartredis-mpi-cpp/src/c \
+    -I/data/home/scvi558/run/zzy/smartredis-mpi-cpp/src/cpp \
+    -L/data/home/scvi558/run/zzy/smartredis-mpi-cpp/lib \
+    -L/data/home/scvi558/run/zzy/SmartRedis/install/lib \
+    -lsmartredis_cwrappers -lsmartredis_mpi -lsmartredis \
+    -lstdc++ \
+    -o test/test_c_wrappers
+## run test_c_wrappers
+mpirun -n 4 ./test/test_c_wrappers

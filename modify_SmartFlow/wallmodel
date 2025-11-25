@@ -1,0 +1,98 @@
+  subroutine wallmodel_DRL(visc, flattened_state, flattened_stress, flattened_metric)
+    use iso_c_binding
+    implicit none
+    real(rp), intent(in) :: visc
+    type(FlattenedState), intent(in) :: flattened_state
+    type(FlattenedStress), intent(inout) :: flattened_stress
+    type(FlattenedMetric), intent(in), optional :: flattened_metric
+    real(rp) :: u1, u2, upar, tauw_tot, tauw1, tauw2, this_action
+    integer :: n_points, i
+    logical, save :: is_first = .true.
+
+    real(C_DOUBLE), allocatable, dimension(:,:) :: drl_state
+    real(C_DOUBLE), allocatable, dimension(:,:) :: drl_action
+    real(C_DOUBLE), allocatable, dimension(:,:) :: drl_reward
+
+    character(kind=C_CHAR, len=:), allocatable :: key_c
+    integer, allocatable :: dims_shape(:)
+
+    n_points = size(flattened_state%vel_x1)
+
+    if (is_first) then
+      call init_smartredis_mpi(db_clustered, MPI_COMM_WORLD)
+      allocate(drl_state (3, n_points))
+      allocate(drl_reward(2, n_points))
+      allocate(drl_action(1, n_points))
+    end if
+    !$acc update async(1) &
+    !$acc self(flattened_state %hwm_plus   , &
+    !$acc      flattened_state %velh_plus  , &
+    !$acc      flattened_state %dveldz_plus, &
+    !$acc      flattened_metric%tauw1      , &
+    !$acc      flattened_metric%tauw1_prev )
+    !$acc wait(1)
+
+    do i = 1, n_points
+      drl_state(1,i) = real(flattened_state%hwm_plus(i), C_DOUBLE)
+      drl_state(2,i) = real(flattened_state%velh_plus(i), C_DOUBLE)
+      drl_state(3,i) = real(flattened_state%dveldz_plus(i), C_DOUBLE)
+    end do
+    
+    if (allocated(dims_shape)) deallocate(dims_shape)
+    allocate(dims_shape(2))
+    dims_shape = (/ 3, n_points /)
+
+    key_c = trim(adjustl(tag)) // ".state" // C_NULL_CHAR
+    call put_state(key_c, dims_shape, drl_state)
+
+    !
+    if (is_first) then
+      is_first = .false.
+    else
+      do i = 1, n_points
+        drl_reward(1,i) = real(flattened_metric%tauw1(i), C_DOUBLE)
+        drl_reward(2,i) = real(flattened_metric%tauw1_prev(i), C_DOUBLE)
+      end do
+      
+      if (allocated(dims_shape)) deallocate(dims_shape)
+      allocate(dims_shape(2))
+      dims_shape = (/ 2, n_points /)
+
+      key_c = trim(adjustl(tag)) // ".reward" // C_NULL_CHAR
+      call put_reward(key_c, dims_shape, drl_reward)
+    end if
+    !
+    
+    if (allocated(dims_shape)) deallocate(dims_shape)
+    allocate(dims_shape(2))
+    dims_shape = (/ 1, n_points /)
+
+    key_c = trim(adjustl(tag)) // ".action" // C_NULL_CHAR
+    call get_action(key_c, dims_shape, drl_action)
+
+    do i = 1, n_points
+      flattened_stress%action(i,1) = real(drl_action(1,i), kind=rp)
+    end do
+
+    !$acc update device(flattened_stress%action) async(1)
+    !$acc wait(1)
+    !
+    !$acc parallel loop collapse(1) default(present) async(1) &
+    !$acc private(this_action,tauw_tot,u1,u2,upar,tauw1,tauw2)
+    
+    do i = 1, n_points
+      this_action = flattened_stress%action(i, 1)
+      tauw_tot = this_action * flattened_stress%tauw(i) ! tauw_n (s_n) -> tauw_n+1 (s_n+1)
+      u1 = flattened_state%vel_x1(i)
+      u2 = flattened_state%vel_x2(i)
+      upar = sqrt(u1**2 + u2**2)
+      tauw1 = tauw_tot * u1 / (upar + eps)
+      tauw2 = tauw_tot * u2 / (upar + eps)
+      flattened_stress%tauw1(i) = tauw1 ! tauw_n+1 (s_n+1)
+      flattened_stress%tauw2(i) = tauw2 ! tauw_n+1 (s_n+1)
+      flattened_stress%tauw (i) = tauw_tot ! tauw_n+1 (s_n+1)
+    end do
+
+    if (allocated(dims_shape)) deallocate(dims_shape)
+
+  end subroutine wallmodel_DRL
