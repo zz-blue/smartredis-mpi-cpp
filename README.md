@@ -1,53 +1,60 @@
-# SmartRedisMPI Framework
+# SmartRedisMPI-CPP
 
 ## Overview
 
-The **SmartRedisMPI framework** provides a high-performance interface to **SmartRedis** in an **MPI environment**, enabling seamless integration with HPC applications. The framework is designed with a **C++ core**, wrapped with a **C interface** to allow easy usage from **Fortran** and **Python**.
-
-### Framework Components
-
-* **SmartRedisMPI C++ Core** (`SmartRedisMPI.cpp` / `.h`)
-  Handles all communication with SmartRedis and MPI, including data storage and retrieval operations.
-
-* **C Interface** (`SmartRedisMPI_CInterface.cpp` / `.h`)
-  Provides a simple, portable API to bridge the C++ core with Fortran and Python.
-
-* **Fortran Interface** (`smartredis_mpi.f90`)
-  Fortran bindings for HPC simulations, allowing the framework to be used in legacy or high-performance Fortran codebases.
-
-* **Python Wrapper** (`pysmartredis.cpp`)
-  Provides Python bindings using `pybind11` to access SmartRedisMPI from Python scripts.
-
-* **Test Programs**
-  Example scripts in Fortran and Python demonstrate initialization, data put/get operations, and cleanup.
+**SmartRedisMPI-CPP** is a high-performance C++ framework providing **MPI-aware access** to **SmartRedis**, designed for integration in HPC applications.  
+It features a **C++ core**, a **C interface**, and wrappers for **Fortran** and **Python**, allowing seamless multi-language usage.
 
 ---
 
-## Features
+## Framework Structure
 
-* MPI-aware: Supports distributed memory parallelism.
-* Multi-language support: Works natively with **C++**, **Fortran**, and **Python**.
-* Data operations: Supports storing/retrieving states, actions, rewards, info arrays, and scalars.
-* Easy to integrate: Minimal dependencies beyond MPI and SmartRedis.
+```
 
----
+SmartRedisMPI-CPP
+│
+├─ C++ Core: SmartRedisMPI.cpp / SmartRedisMPI.h
+│    Handles communication with SmartRedis and MPI.
+│    Builds: libsmartredis_core.a
+│
+├─ C Interface: SmartRedisMPI_CInterface.cpp / SmartRedisMPI_CInterface.h
+│    Bridges C++ core to C API.
+│    Builds: libsmartredis_cinterface.a
+│
+├─ Fortran Wrapper: smartredis_mpi.f90
+│    Provides Fortran bindings.
+│    Builds: libsmartredis_mpi.a
+│
+├─ Python Wrapper: pysmartredis.cpp
+│    Provides Python bindings using pybind11.
+│    Builds: pysmartredis.so
+│
+├─ C Wrappers: SmartRedisMPI_CWrappers.cpp
+│    Additional C wrappers (optional).
+│    Builds: libsmartredis_cwrappers.a
+│
+└─ Test Programs
+Example Fortran and Python scripts for verification.
 
-## Installation
+````
 
-1. **Prerequisites**:
+## Build Instructions
 
-   * MPI (e.g., OpenMPI, MVAPICH2, or HPC-X MPI)
-   * SmartRedis library
-   * C++ compiler with C++11 support
-   * For Python: `pybind11`, compatible Python version
+1. **Set paths in Makefile** 
+2. **Build all components**:
+```bash
+make
+````
 
-2. **Build**:
+* Produces static libraries:
 
-   ```bash
-   make
-   ```
+  * `libsmartredis_core.a`
+  * `libsmartredis_cinterface.a`
+  * `libsmartredis_mpi.a` (Fortran)
+  * `libsmartredis_cwrappers.a` (C)
+* Produces Python shared object:
 
-   This compiles the C++ core, C interface, Fortran module, and Python wrapper.
+  * `pysmartredis.so`
 
 ---
 
@@ -76,10 +83,30 @@ pysmartredis.put_real_scalar("test_scalar", 3.14)
 pysmartredis.finalize_smartredis_mpi()
 ```
 
+### C++ Example
+
+```c++
+#include "SmartRedisMPI.h"
+
+int main() {
+    SmartRedisMPI::init(true);
+    SmartRedisMPI::put_real_scalar("test_scalar", 3.14);
+    SmartRedisMPI::finalize();
+    return 0;
+}
+```
+
 ---
 
-## Notes
+## Integration in HPC Projects
 
-* The C interface is primarily for interoperability; direct usage in C++ is also supported.
-* MPI handles must be initialized before calling any put/get operations.
-* Python scripts require the compiled `pysmartredis` module in the Python path.
+When using in a project like **CaLES-smartflow**, link the following libraries in order:
+
+```text
+-lsmartredis_mpi -lsmartredis_cinterface -lsmartredis_core
+```
+
+* Ensure proper **C++ compiler ABI compatibility**.
+* For Fortran interoperability, pass strings as `cchar` using `iso_c_binding`.
+* Python bindings require `pysmartredis.so` in `PYTHONPATH`.
+
