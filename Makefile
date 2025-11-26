@@ -54,29 +54,32 @@ C_DIR  := $(SRC_DIR)/c
 # -----------------------
 # Source files
 # -----------------------
-CPP_SRCS := $(CPP_DIR)/SmartRedisMPI.cpp $(CPP_DIR)/SmartRedisMPI_CInterface.cpp
-CPP_OBJS := $(patsubst $(CPP_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(CPP_SRCS))
+CORE_SRCS := $(CPP_DIR)/SmartRedisMPI.cpp
+CORE_OBJS := $(patsubst $(CPP_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(CORE_SRCS))
+CORE_LIB  := $(LIB_DIR)/libsmartredis_core.a
+
+CIF_SRCS := $(CPP_DIR)/SmartRedisMPI_CInterface.cpp
+CIF_OBJS := $(patsubst $(CPP_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(CIF_SRCS))
+CIF_LIB  := $(LIB_DIR)/libsmartredis_cinterface.a
 
 F90_SRCS := $(F90_DIR)/smartredis_mpi.f90
 F90_OBJS := $(patsubst $(F90_DIR)/%.f90,$(BUILD_DIR)/%.o,$(F90_SRCS))
 F90_MODS := $(INC_DIR)/smartredis_mpi.mod
-
-PY_SRC := $(PY_DIR)/pysmartredis.cpp
-PY_OBJ := $(BUILD_DIR)/pysmartredis.o
+FORTRAN_LIB := $(LIB_DIR)/libsmartredis_mpi.a
 
 C_SRCS := $(C_DIR)/SmartRedisMPI_CWrappers.cpp
 C_OBJS := $(patsubst $(C_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(C_SRCS))
-
-SHARED_LIB := $(LIB_DIR)/libsmartredis_mpi.so
-FORTRAN_LIB := $(LIB_DIR)/libsmartredis_mpi.a
-PY_MODULE := $(LIB_DIR)/pysmartredis.so
 C_WRAPPER_LIB := $(LIB_DIR)/libsmartredis_cwrappers.a
+
+PY_SRC := $(PY_DIR)/pysmartredis.cpp
+PY_OBJ := $(BUILD_DIR)/pysmartredis.o
+PY_MODULE := $(LIB_DIR)/pysmartredis.so
 
 # -----------------------
 # Default target
 # -----------------------
 .PHONY: all
-all: dirs $(SHARED_LIB) $(FORTRAN_LIB) $(PY_MODULE) $(C_WRAPPER_LIB)
+all: dirs $(CORE_LIB) $(CIF_LIB) $(FORTRAN_LIB) $(C_WRAPPER_LIB) $(PY_MODULE)
 
 # -----------------------
 # Create directories
@@ -94,48 +97,55 @@ $(BUILD_DIR)/%.o: $(CPP_DIR)/%.cpp
 	@echo "CXX -> $<"
 	$(MPICXX) $(CXXFLAGS) -c $< -o $@
 
-# Build pybind11 object
-$(BUILD_DIR)/pysmartredis.o: $(PY_SRC)
+# Build Python object
+$(BUILD_DIR)/%.o: $(PY_DIR)/%.cpp
 	@echo "CXX(py) -> $<"
 	$(MPICXX) $(CXXFLAGS) -c $< -o $@
 
-# -----------------------
 # Build Fortran objects (module)
-# -----------------------
 $(BUILD_DIR)/%.o: $(F90_DIR)/%.f90
 	@echo "FORTRAN -> $<"
 	$(MPIFORT) $(FCFLAGS) $(MODULE_FLAG) $(INC_DIR) -c $< -o $@
 
-# compile rule for c wrappers (reuse C++ compiler)
+# Build C wrapper objects
 $(BUILD_DIR)/%.o: $(C_DIR)/%.cpp
 	@echo "CXX(C) -> $<"
 	$(MPICXX) $(CXXFLAGS) -c $< -o $@
 
 # -----------------------
-# Link shared C++ library
+# Archive core C++ library
 # -----------------------
-$(SHARED_LIB): $(CPP_OBJS)
-	@echo "Linking shared library -> $@"
-	$(MPICXX) -shared -o $@ $^ $(LDFLAGS) $(LIBS)
-
-# -----------------------
-# Create Fortran static library from module objects
-# -----------------------
-$(FORTRAN_LIB): $(F90_OBJS)
-	@echo "Archiving Fortran static lib -> $@"
+$(CORE_LIB): $(CORE_OBJS)
+	@echo "Archiving core C++ lib -> $@"
 	ar rcs $@ $^
 
 # -----------------------
-# Build Python module
+# Archive C Interface library (depends on core)
 # -----------------------
-$(PY_MODULE): $(PY_OBJ) $(CPP_OBJS)
+$(CIF_LIB): $(CIF_OBJS) $(CORE_LIB)
+	@echo "Archiving C Interface lib -> $@"
+	ar rcs $@ $^
+
+# -----------------------
+# Archive Fortran static library (depends on C Interface + core)
+# -----------------------
+$(FORTRAN_LIB): $(F90_OBJS) $(CIF_LIB) $(CORE_LIB)
+	@echo "Archiving Fortran lib -> $@"
+	ar rcs $@ $^
+
+# -----------------------
+# Archive C Wrapper library (depends on C Interface + core)
+# -----------------------
+$(C_WRAPPER_LIB): $(C_OBJS) $(CIF_LIB) $(CORE_LIB)
+	@echo "Archiving C Wrapper lib -> $@"
+	ar rcs $@ $^
+
+# -----------------------
+# Build Python shared library (depends on C Interface + core)
+# -----------------------
+$(PY_MODULE): $(PY_OBJ) $(CIF_LIB) $(CORE_LIB)
 	@echo "Linking Python module -> $@"
 	$(MPICXX) -shared -o $@ $^ $(LDFLAGS) $(LIBS) $(shell $(PYTHON) -m pybind11 --includes)
-
-# archive wrappers library
-$(C_WRAPPER_LIB): $(C_OBJS) $(CPP_OBJS)
-	@echo "Archiving C wrappers lib -> $@"
-	ar rcs $@ $^
 
 # -----------------------
 # Clean
