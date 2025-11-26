@@ -1,0 +1,4 @@
+override LIBS += -L/data/home/scvi558/run/zzy/smartredis-mpi-cpp/build/lib -lsmartredis_mpi -lsmartredis_cinterface -lsmartredis_core
+override INCS += -I/data/home/scvi558/run/zzy/smartredis-mpi-cpp/build/include
+
+override LIBS += -L/data/apps/gcc/13.4.0/lib64 -lstdc++
